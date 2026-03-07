@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { ListingStatus } from "@/types/listing";
-import type { Listing, ListingFilters, CommentMock, EngagementState, PriceSortOrder } from "@/types/listing";
+import type { Listing, ListingFilters, Comment, PriceSortOrder } from "@/types/listing";
+import {
+  updateStatusAction,
+  toggleLikeAction,
+  addCommentAction,
+} from "@/actions/listings";
 
-const STORAGE_KEY_STATUS = "hub-ventas-statuses";
 const STORAGE_KEY_ENGAGEMENT = "hub-ventas-engagement";
+
+interface LocalEngagement {
+  liked: Record<string, boolean>;
+  saved: Record<string, boolean>;
+}
 
 const loadFromStorage = <T>(key: string, fallback: T): T => {
   if (typeof window === "undefined") return fallback;
@@ -26,11 +35,9 @@ const saveToStorage = (key: string, value: unknown) => {
 };
 
 export const useListingsState = (initialListings: Listing[]) => {
-  const [statusOverrides, setStatusOverrides] = useState<Record<string, ListingStatus>>({});
-  const [engagement, setEngagement] = useState<EngagementState>({
+  const [engagement, setEngagement] = useState<LocalEngagement>({
     liked: {},
     saved: {},
-    comments: {},
   });
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -41,22 +48,29 @@ export const useListingsState = (initialListings: Listing[]) => {
     sortByPrice: "NONE",
   });
 
+  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, ListingStatus>>({});
+  const [optimisticComments, setOptimisticComments] = useState<Record<string, Comment[]>>({});
+  const [optimisticLikeDelta, setOptimisticLikeDelta] = useState<Record<string, number>>({});
+
+  const prevListingsRef = useRef(initialListings);
   useEffect(() => {
-    setStatusOverrides(loadFromStorage<Record<string, ListingStatus>>(STORAGE_KEY_STATUS, {}));
+    if (prevListingsRef.current !== initialListings) {
+      setOptimisticStatuses({});
+      setOptimisticComments({});
+      setOptimisticLikeDelta({});
+      prevListingsRef.current = initialListings;
+    }
+  }, [initialListings]);
+
+  useEffect(() => {
     setEngagement(
-      loadFromStorage<EngagementState>(STORAGE_KEY_ENGAGEMENT, {
+      loadFromStorage<LocalEngagement>(STORAGE_KEY_ENGAGEMENT, {
         liked: {},
         saved: {},
-        comments: {},
       })
     );
     setIsHydrated(true);
   }, []);
-
-  useEffect(() => {
-    if (!isHydrated) return;
-    saveToStorage(STORAGE_KEY_STATUS, statusOverrides);
-  }, [statusOverrides, isHydrated]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -67,9 +81,14 @@ export const useListingsState = (initialListings: Listing[]) => {
     () =>
       initialListings.map((item) => ({
         ...item,
-        status: statusOverrides[item.id] ?? item.status,
+        status: optimisticStatuses[item.id] ?? item.status,
+        likesCount: item.likesCount + (optimisticLikeDelta[item.id] ?? 0),
+        comments: [
+          ...item.comments,
+          ...(optimisticComments[item.id] ?? []),
+        ],
       })),
-    [initialListings, statusOverrides]
+    [initialListings, optimisticStatuses, optimisticLikeDelta, optimisticComments]
   );
 
   const filteredListings = useMemo(() => {
@@ -109,16 +128,29 @@ export const useListingsState = (initialListings: Listing[]) => {
     };
   }, [listings]);
 
-  const updateStatus = useCallback((id: string, status: ListingStatus) => {
-    setStatusOverrides((prev) => ({ ...prev, [id]: status }));
+  const updateStatus = useCallback(async (id: string, status: ListingStatus) => {
+    setOptimisticStatuses((prev) => ({ ...prev, [id]: status }));
+    await updateStatusAction(id, status);
   }, []);
 
-  const toggleLike = useCallback((id: string) => {
-    setEngagement((prev) => ({
-      ...prev,
-      liked: { ...prev.liked, [id]: !prev.liked[id] },
-    }));
-  }, []);
+  const toggleLike = useCallback(
+    async (id: string) => {
+      const isCurrentlyLiked = engagement.liked[id] ?? false;
+      const delta = isCurrentlyLiked ? -1 : 1;
+
+      setEngagement((prev) => ({
+        ...prev,
+        liked: { ...prev.liked, [id]: !isCurrentlyLiked },
+      }));
+      setOptimisticLikeDelta((prev) => ({
+        ...prev,
+        [id]: (prev[id] ?? 0) + delta,
+      }));
+
+      await toggleLikeAction(id, isCurrentlyLiked);
+    },
+    [engagement.liked]
+  );
 
   const toggleSave = useCallback((id: string) => {
     setEngagement((prev) => ({
@@ -127,21 +159,20 @@ export const useListingsState = (initialListings: Listing[]) => {
     }));
   }, []);
 
-  const addComment = useCallback((id: string, text: string) => {
-    const newComment: CommentMock = {
-      id: `user-${Date.now()}`,
+  const addComment = useCallback(async (id: string, text: string) => {
+    const optimistic: Comment = {
+      id: `optimistic-${Date.now()}`,
       authorName: "Tú",
       text,
       createdAt: new Date().toISOString(),
     };
 
-    setEngagement((prev) => ({
+    setOptimisticComments((prev) => ({
       ...prev,
-      comments: {
-        ...prev.comments,
-        [id]: [...(prev.comments[id] ?? []), newComment],
-      },
+      [id]: [...(prev[id] ?? []), optimistic],
     }));
+
+    await addCommentAction(id, text);
   }, []);
 
   const setPlatformFilter = useCallback((value: ListingFilters["platform"]) => {

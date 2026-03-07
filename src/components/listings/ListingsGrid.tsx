@@ -2,13 +2,12 @@
 
 import { ListingCard } from "@/components/listings/ListingCard";
 import { ListingStatus } from "@/types/listing";
-import type { Listing, CommentMock } from "@/types/listing";
+import type { Listing } from "@/types/listing";
 
 interface ListingsGridProps {
   listings: Listing[];
   likedMap: Record<string, boolean>;
   savedMap: Record<string, boolean>;
-  commentsMap: Record<string, CommentMock[]>;
   onToggleLike: (id: string) => void;
   onToggleSave: (id: string) => void;
   onStatusChange: (id: string, status: ListingStatus) => void;
@@ -19,7 +18,6 @@ export const ListingsGrid = ({
   listings,
   likedMap,
   savedMap,
-  commentsMap,
   onToggleLike,
   onToggleSave,
   onStatusChange,
@@ -40,26 +38,18 @@ export const ListingsGrid = ({
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {listings.map((listing) => {
-        const mergedComments = [
-          ...listing.comments,
-          ...(commentsMap[listing.id] ?? []),
-        ];
-
-        return (
-          <ListingCard
-            key={listing.id}
-            listing={listing}
-            isLiked={likedMap[listing.id] ?? false}
-            isSaved={savedMap[listing.id] ?? false}
-            allComments={mergedComments}
-            onToggleLike={() => onToggleLike(listing.id)}
-            onToggleSave={() => onToggleSave(listing.id)}
-            onStatusChange={(status: ListingStatus) => onStatusChange(listing.id, status)}
-            onAddComment={(text: string) => onAddComment(listing.id, text)}
-          />
-        );
-      })}
+      {listings.map((listing) => (
+        <ListingCard
+          key={listing.id}
+          listing={listing}
+          isLiked={likedMap[listing.id] ?? false}
+          isSaved={savedMap[listing.id] ?? false}
+          onToggleLike={() => onToggleLike(listing.id)}
+          onToggleSave={() => onToggleSave(listing.id)}
+          onStatusChange={(status: ListingStatus) => onStatusChange(listing.id, status)}
+          onAddComment={(text: string) => onAddComment(listing.id, text)}
+        />
+      ))}
     </div>
   );
 };

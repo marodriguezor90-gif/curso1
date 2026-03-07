@@ -10,7 +10,7 @@ export enum ListingStatus {
   SOLD = "SOLD",
 }
 
-export interface CommentMock {
+export interface Comment {
   id: string;
   authorName: string;
   text: string;
@@ -33,7 +33,7 @@ export interface Listing {
   images: string[];
   status: ListingStatus;
   likesCount: number;
-  comments: CommentMock[];
+  comments: Comment[];
   createdAt: string;
 }
 
@@ -55,10 +55,4 @@ export interface ListingFilters {
   category: string;
   status: ListingStatus | "ALL";
   sortByPrice: PriceSortOrder;
-}
-
-export interface EngagementState {
-  liked: Record<string, boolean>;
-  saved: Record<string, boolean>;
-  comments: Record<string, CommentMock[]>;
 }

@@ -2,9 +2,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PLATFORM_COLORS, PLATFORM_LABELS } from "@/constants/filters";
-import { SELLER_PROFILE } from "@/constants/seller";
 import { Star } from "lucide-react";
-import type { Platform } from "@/types/listing";
+import type { Platform, SellerProfile } from "@/types/listing";
 
 interface SellerStats {
   totalActive: number;
@@ -14,10 +13,11 @@ interface SellerStats {
 }
 
 interface SellerHeaderProps {
+  seller: SellerProfile;
   stats: SellerStats;
 }
 
-const RatingStars = ({ rating }: { rating: number }) => {
+const RatingStars = ({ rating, totalSales }: { rating: number; totalSales: number }) => {
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
@@ -31,7 +31,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
         />
       ))}
       <span className="ml-1 text-sm text-muted-foreground">
-        ({SELLER_PROFILE.totalSales}+)
+        ({totalSales}+)
       </span>
     </div>
   );
@@ -43,13 +43,13 @@ const PlatformBadge = ({ platform }: { platform: Platform }) => (
   </Badge>
 );
 
-export const SellerHeader = ({ stats }: SellerHeaderProps) => {
+export const SellerHeader = ({ seller, stats }: SellerHeaderProps) => {
   return (
     <div className="flex flex-col items-center gap-4 py-8">
       <Avatar className="h-24 w-24 border-2 border-pink-200">
-        <AvatarImage src={SELLER_PROFILE.avatarUrl} alt={SELLER_PROFILE.name} />
+        <AvatarImage src={seller.avatarUrl} alt={seller.name} />
         <AvatarFallback className="bg-pink-100 text-pink-700 text-xl">
-          {SELLER_PROFILE.name
+          {seller.name
             .split(" ")
             .map((n) => n[0])
             .join("")}
@@ -57,32 +57,32 @@ export const SellerHeader = ({ stats }: SellerHeaderProps) => {
       </Avatar>
 
       <div className="text-center">
-        <h1 className="text-2xl font-bold">{SELLER_PROFILE.name}</h1>
-        <p className="text-sm text-muted-foreground">@{SELLER_PROFILE.username}</p>
+        <h1 className="text-2xl font-bold">{seller.name}</h1>
+        <p className="text-sm text-muted-foreground">@{seller.username}</p>
         <div className="mt-1">
-          <RatingStars rating={SELLER_PROFILE.rating} />
+          <RatingStars rating={seller.rating} totalSales={seller.totalSales} />
         </div>
       </div>
 
       <div className="flex items-center gap-6 text-sm">
         <div className="text-center">
-          <p className="font-semibold">{SELLER_PROFILE.followers.toLocaleString()}</p>
+          <p className="font-semibold">{seller.followers.toLocaleString()}</p>
           <p className="text-muted-foreground">Seguidoras</p>
         </div>
         <Separator orientation="vertical" className="h-8" />
         <div className="text-center">
-          <p className="font-semibold">{SELLER_PROFILE.totalSales}</p>
+          <p className="font-semibold">{seller.totalSales}</p>
           <p className="text-muted-foreground">Ventas</p>
         </div>
         <Separator orientation="vertical" className="h-8" />
         <div className="text-center">
-          <p className="font-semibold">{SELLER_PROFILE.following}</p>
+          <p className="font-semibold">{seller.following}</p>
           <p className="text-muted-foreground">Siguiendo</p>
         </div>
       </div>
 
       <div className="flex flex-wrap justify-center gap-2">
-        {SELLER_PROFILE.platforms.map((platform) => (
+        {seller.platforms.map((platform) => (
           <PlatformBadge key={platform} platform={platform} />
         ))}
       </div>

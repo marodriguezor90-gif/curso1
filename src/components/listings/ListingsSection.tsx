@@ -5,13 +5,14 @@ import { SellerHeader } from "@/components/seller/SellerHeader";
 import { ListingsFilters } from "@/components/listings/ListingsFilters";
 import { ListingsGrid } from "@/components/listings/ListingsGrid";
 import { Separator } from "@/components/ui/separator";
-import type { Listing } from "@/types/listing";
+import type { Listing, SellerProfile } from "@/types/listing";
 
 interface ListingsSectionProps {
   initialListings: Listing[];
+  seller: SellerProfile | null;
 }
 
-export const ListingsSection = ({ initialListings }: ListingsSectionProps) => {
+export const ListingsSection = ({ initialListings, seller }: ListingsSectionProps) => {
   const {
     filteredListings,
     filters,
@@ -38,7 +39,7 @@ export const ListingsSection = ({ initialListings }: ListingsSectionProps) => {
 
   return (
     <div className="space-y-6">
-      <SellerHeader stats={stats} />
+      {seller && <SellerHeader seller={seller} stats={stats} />}
       <Separator />
       <ListingsFilters
         filters={filters}
@@ -52,7 +53,6 @@ export const ListingsSection = ({ initialListings }: ListingsSectionProps) => {
         listings={filteredListings}
         likedMap={engagement.liked}
         savedMap={engagement.saved}
-        commentsMap={engagement.comments}
         onToggleLike={toggleLike}
         onToggleSave={toggleSave}
         onStatusChange={updateStatus}

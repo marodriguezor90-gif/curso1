@@ -11,10 +11,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { MessageCircle, Send } from "lucide-react";
-import type { CommentMock } from "@/types/listing";
+import type { Comment } from "@/types/listing";
 
 interface ListingCommentsProps {
-  comments: CommentMock[];
+  comments: Comment[];
   onAddComment: (text: string) => void;
 }
 

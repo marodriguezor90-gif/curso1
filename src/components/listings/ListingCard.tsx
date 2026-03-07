@@ -24,7 +24,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { ListingStatus } from "@/types/listing";
-import type { Listing, CommentMock } from "@/types/listing";
+import type { Listing } from "@/types/listing";
 
 interface ListingCardProps {
   listing: Listing;
@@ -34,7 +34,6 @@ interface ListingCardProps {
   onToggleSave: () => void;
   onStatusChange: (status: ListingStatus) => void;
   onAddComment: (text: string) => void;
-  allComments: CommentMock[];
 }
 
 const formatPrice = (price: number, currency: string) => {
@@ -53,7 +52,6 @@ export const ListingCard = ({
   onToggleSave,
   onStatusChange,
   onAddComment,
-  allComments,
 }: ListingCardProps) => {
   return (
     <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
@@ -120,13 +118,11 @@ export const ListingCard = ({
               <Heart
                 className={`h-4 w-4 ${isLiked ? "fill-red-500 text-red-500" : ""}`}
               />
-              <span className="text-xs">
-                {listing.likesCount + (isLiked ? 1 : 0)}
-              </span>
+              <span className="text-xs">{listing.likesCount}</span>
             </Button>
 
             <ListingComments
-              comments={allComments}
+              comments={listing.comments}
               onAddComment={onAddComment}
             />
           </div>

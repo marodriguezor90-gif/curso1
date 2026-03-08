@@ -8,20 +8,24 @@ interface ListingsGridProps {
   listings: Listing[];
   likedMap: Record<string, boolean>;
   savedMap: Record<string, boolean>;
+  uploadingIds: Set<string>;
   onToggleLike: (id: string) => void;
   onToggleSave: (id: string) => void;
   onStatusChange: (id: string, status: ListingStatus) => void;
   onAddComment: (id: string, text: string) => void;
+  onImageUpload: (id: string, file: File) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const ListingsGrid = ({
   listings,
   likedMap,
   savedMap,
+  uploadingIds,
   onToggleLike,
   onToggleSave,
   onStatusChange,
   onAddComment,
+  onImageUpload,
 }: ListingsGridProps) => {
   if (listings.length === 0) {
     return (
@@ -44,10 +48,12 @@ export const ListingsGrid = ({
           listing={listing}
           isLiked={likedMap[listing.id] ?? false}
           isSaved={savedMap[listing.id] ?? false}
+          isUploading={uploadingIds.has(listing.id)}
           onToggleLike={() => onToggleLike(listing.id)}
           onToggleSave={() => onToggleSave(listing.id)}
           onStatusChange={(status: ListingStatus) => onStatusChange(listing.id, status)}
           onAddComment={(text: string) => onAddComment(listing.id, text)}
+          onImageUpload={(file: File) => onImageUpload(listing.id, file)}
         />
       ))}
     </div>

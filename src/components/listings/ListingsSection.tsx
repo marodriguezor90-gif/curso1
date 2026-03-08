@@ -23,6 +23,8 @@ export const ListingsSection = ({ initialListings, seller }: ListingsSectionProp
     toggleLike,
     toggleSave,
     addComment,
+    uploadImage,
+    uploadingIds,
     setPlatformFilter,
     setCategoryFilter,
     setStatusFilter,
@@ -53,10 +55,12 @@ export const ListingsSection = ({ initialListings, seller }: ListingsSectionProp
         listings={filteredListings}
         likedMap={engagement.liked}
         savedMap={engagement.saved}
+        uploadingIds={uploadingIds}
         onToggleLike={toggleLike}
         onToggleSave={toggleSave}
         onStatusChange={updateStatus}
         onAddComment={addComment}
+        onImageUpload={uploadImage}
       />
     </div>
   );

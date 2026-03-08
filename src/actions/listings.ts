@@ -5,6 +5,7 @@ import {
   updateStatus,
   toggleLike,
   addComment,
+  uploadListingImage,
 } from "@/services/listings-service";
 import type { ListingStatus } from "@/types/listing";
 
@@ -26,6 +27,23 @@ export const toggleLikeAction = async (
   isCurrentlyLiked: boolean
 ) => {
   const result = await toggleLike(listingId, isCurrentlyLiked);
+
+  if (result.success) {
+    revalidatePath("/");
+  }
+
+  return result;
+};
+
+export const uploadImageAction = async (formData: FormData) => {
+  const listingId = formData.get("listingId") as string;
+  const file = formData.get("file") as File;
+
+  if (!listingId || !file) {
+    return { success: false, error: "Listing ID and file are required" };
+  }
+
+  const result = await uploadListingImage(listingId, file);
 
   if (result.success) {
     revalidatePath("/");

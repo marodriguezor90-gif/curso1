@@ -136,6 +136,67 @@ export const decrementLikesCount = async (id: string): Promise<void> => {
   }
 };
 
+const STORAGE_BUCKET = "listing-images";
+
+export const uploadListingImage = async (
+  listingId: string,
+  file: File
+): Promise<string> => {
+  const supabase = createServerClient();
+
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const filePath = `${listingId}/${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(filePath, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(`Failed to upload image: ${uploadError.message}`);
+  }
+
+  const { data } = supabase.storage
+    .from(STORAGE_BUCKET)
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+};
+
+export const updateListingImages = async (
+  id: string,
+  images: string[]
+): Promise<void> => {
+  const supabase = createServerClient();
+
+  const { error } = await supabase
+    .from("listings")
+    .update({ images })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`Failed to update listing images: ${error.message}`);
+  }
+};
+
+export const getListingImages = async (id: string): Promise<string[]> => {
+  const supabase = createServerClient();
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select("images")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to get listing images: ${error.message}`);
+  }
+
+  return (data as { images: string[] }).images;
+};
+
 export const createComment = async (
   listingId: string,
   authorName: string,

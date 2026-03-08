@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,18 +23,26 @@ import {
   Heart,
   Bookmark,
   ExternalLink,
+  ImageOff,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { ListingStatus } from "@/types/listing";
 import type { Listing } from "@/types/listing";
+
+const ACCEPTED_IMAGE_TYPES = "image/jpeg,image/png,image/webp";
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 interface ListingCardProps {
   listing: Listing;
   isLiked: boolean;
   isSaved: boolean;
+  isUploading: boolean;
   onToggleLike: () => void;
   onToggleSave: () => void;
   onStatusChange: (status: ListingStatus) => void;
   onAddComment: (text: string) => void;
+  onImageUpload: (file: File) => Promise<{ success: boolean; error?: string }>;
 }
 
 const formatPrice = (price: number, currency: string) => {
@@ -48,21 +57,56 @@ export const ListingCard = ({
   listing,
   isLiked,
   isSaved,
+  isUploading,
   onToggleLike,
   onToggleSave,
   onStatusChange,
   onAddComment,
+  onImageUpload,
 }: ListingCardProps) => {
+  const [imgError, setImgError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      alert("La imagen no puede pesar más de 5MB");
+      return;
+    }
+
+    setImgError(false);
+    await onImageUpload(file);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
       <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-        <Image
-          src={listing.images[0]}
-          alt={listing.title}
-          fill
-          className="object-cover transition-transform group-hover:scale-105"
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-        />
+        {imgError ? (
+          <div className="flex h-full w-full items-center justify-center bg-muted">
+            <ImageOff className="h-10 w-10 text-muted-foreground/40" />
+          </div>
+        ) : (
+          <Image
+            src={listing.images[0]}
+            alt={listing.title}
+            fill
+            className="object-cover transition-transform group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            onError={() => setImgError(true)}
+          />
+        )}
+
+        {isUploading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          </div>
+        )}
 
         <div className="absolute left-2 top-2 flex flex-col gap-1">
           <Badge
@@ -86,6 +130,24 @@ export const ListingCard = ({
           <Bookmark
             className={`h-4 w-4 ${isSaved ? "fill-primary text-primary" : "text-gray-600"}`}
           />
+        </Button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_IMAGE_TYPES}
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-white/80 opacity-0 backdrop-blur-sm transition-opacity hover:bg-white group-hover:opacity-100"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          aria-label="Cambiar imagen"
+        >
+          <Camera className="h-4 w-4 text-gray-600" />
         </Button>
       </div>
 

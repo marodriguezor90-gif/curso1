@@ -7,6 +7,7 @@ import {
   updateStatusAction,
   toggleLikeAction,
   addCommentAction,
+  uploadImageAction,
 } from "@/actions/listings";
 
 const STORAGE_KEY_ENGAGEMENT = "hub-ventas-engagement";
@@ -51,6 +52,8 @@ export const useListingsState = (initialListings: Listing[]) => {
   const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, ListingStatus>>({});
   const [optimisticComments, setOptimisticComments] = useState<Record<string, Comment[]>>({});
   const [optimisticLikeDelta, setOptimisticLikeDelta] = useState<Record<string, number>>({});
+  const [optimisticImages, setOptimisticImages] = useState<Record<string, string>>({});
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
 
   const prevListingsRef = useRef(initialListings);
   useEffect(() => {
@@ -58,6 +61,7 @@ export const useListingsState = (initialListings: Listing[]) => {
       setOptimisticStatuses({});
       setOptimisticComments({});
       setOptimisticLikeDelta({});
+      setOptimisticImages({});
       prevListingsRef.current = initialListings;
     }
   }, [initialListings]);
@@ -79,16 +83,20 @@ export const useListingsState = (initialListings: Listing[]) => {
 
   const listings = useMemo(
     () =>
-      initialListings.map((item) => ({
-        ...item,
-        status: optimisticStatuses[item.id] ?? item.status,
-        likesCount: item.likesCount + (optimisticLikeDelta[item.id] ?? 0),
-        comments: [
-          ...item.comments,
-          ...(optimisticComments[item.id] ?? []),
-        ],
-      })),
-    [initialListings, optimisticStatuses, optimisticLikeDelta, optimisticComments]
+      initialListings.map((item) => {
+        const previewUrl = optimisticImages[item.id];
+        return {
+          ...item,
+          status: optimisticStatuses[item.id] ?? item.status,
+          likesCount: item.likesCount + (optimisticLikeDelta[item.id] ?? 0),
+          comments: [
+            ...item.comments,
+            ...(optimisticComments[item.id] ?? []),
+          ],
+          images: previewUrl ? [previewUrl, ...item.images.slice(1)] : item.images,
+        };
+      }),
+    [initialListings, optimisticStatuses, optimisticLikeDelta, optimisticComments, optimisticImages]
   );
 
   const filteredListings = useMemo(() => {
@@ -175,6 +183,37 @@ export const useListingsState = (initialListings: Listing[]) => {
     await addCommentAction(id, text);
   }, []);
 
+  const uploadImage = useCallback(async (id: string, file: File) => {
+    const previewUrl = URL.createObjectURL(file);
+    setOptimisticImages((prev) => ({ ...prev, [id]: previewUrl }));
+    setUploadingIds((prev) => new Set(prev).add(id));
+
+    try {
+      const formData = new FormData();
+      formData.append("listingId", id);
+      formData.append("file", file);
+
+      const result = await uploadImageAction(formData);
+
+      if (!result.success) {
+        setOptimisticImages((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+
+      return result;
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      setUploadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }, []);
+
   const setPlatformFilter = useCallback((value: ListingFilters["platform"]) => {
     setFilters((prev) => ({ ...prev, platform: value }));
   }, []);
@@ -198,10 +237,12 @@ export const useListingsState = (initialListings: Listing[]) => {
     stats,
     engagement,
     isHydrated,
+    uploadingIds,
     updateStatus,
     toggleLike,
     toggleSave,
     addComment,
+    uploadImage,
     setPlatformFilter,
     setCategoryFilter,
     setStatusFilter,
